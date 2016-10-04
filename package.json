@@ -1,0 +1,38 @@
+{
+  "name": "stellar-forms",
+  "version": "0.1.0",
+  "description": "Easily create forms using React, validated with Yup",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/reohjs/stellar-forms.git"
+  },
+  "main": "./lib/index",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "lint": "eslint ./lib",
+    "lintfix": "eslint ./lib --fix",
+    "transpile": "babel src/ --out-dir lib/"
+  },
+  "devDependencies": {
+    "babel-cli": "6.x.x",
+    "babel-core": "6.x.x",
+    "babel-eslint": "4.x.x",
+    "babel-plugin-react-require": "2.x.x",
+    "babel-plugin-transform-class-properties": "^6.6.0",
+    "babel-plugin-transform-runtime": "6.x.x",
+    "babel-polyfill": "6.x.x",
+    "babel-preset-es2015": "6.x.x",
+    "babel-preset-react": "6.x.x",
+    "babel-preset-stage-2": "6.x.x",
+    "eslint": "1.7.x",
+    "eslint-plugin-babel": "2.x.x",
+    "eslint-plugin-react": "3.x.x"
+  },
+  "dependencies": {
+    "babel-runtime": "6.x.x",
+    "react": "^15.3.1",
+    "react-dom": "^15.0.0",
+    "yup": "^0.18.3"
+  }
+}
