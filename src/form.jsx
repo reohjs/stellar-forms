@@ -2,7 +2,7 @@ import React from 'react';
 import _ from 'lodash';
 import Yup from 'yup';
 
-import Stellar from './core';
+import Stellar, {log} from './core';
 
 export default class extends React.Component {
   render () {
@@ -39,6 +39,17 @@ export default class extends React.Component {
     }
   }
 
+  componentDidMount () {
+    // validate form at startup, incase of autofill (lastpass etc.)
+    setTimeout(() => {
+      let data = Object.keys(this.state.values)[0];
+      if (data) {
+        log('[Stellar.forms]: Form has autofilled data, now validating. ', data);
+        this.validateForm();
+      }
+    }, Stellar.forms.AUTOFILL_VALIDATION_DELAY);
+  }
+
   submit (event) {
     if (event) event.stopPropagation();
     if (event) event.preventDefault();
@@ -48,7 +59,7 @@ export default class extends React.Component {
 
     //this.blur(); // Just in case a field doesn't blur before a submit
 
-    if (this.isValid() && typeof onValidSubmit === 'function') {
+    if (this.state.isValid && typeof onValidSubmit === 'function') {
       onValidSubmit(data);
     }
     else if (typeof onInvalidSubmit === 'function') {
@@ -60,11 +71,19 @@ export default class extends React.Component {
   parentSubmit () {
     this.submit();
   }
+  // sync input values
+  updateValue (key) {
+    return (event) => {
+      log('[updateValue]: ', key, event);
+      let {values} = this.state;
+      values[key] = event.target.value;
+      this.setState({values});
+    }
+  }
 
   validateField (key) {
     // Return callback for event props to use
     return (event) => {
-
       // validator => use this to maybe support validator's other than Joi in future
       let schema = this.props.schema || this.props.validator;
       let target = event.target; // Store DOM node
@@ -74,36 +93,21 @@ export default class extends React.Component {
 
       if (schema && Stellar.forms.validator === 'yup') {
         // Validate value
-        schema[key].validate(value, {context}).then((v) => {
+        schema[key].validate(value, {context}).then(v => {
           if (!v) {return}
-          // Store value
-          let {values} = this.state;
-          values[key] = value;
-          this.setState({values});
-          // Cleanup errors
-          let {errors} = this.state;
-          if (errors[key]) {
-            delete errors[key];
-            this.setState({errors});
-          }
-          log('[Stellar.forms] Form values', values);
+          log('[StellarForm.validateField] Form values: ', v);
           this.validateForm();
-
-        }).catch((error) => {
+        }).catch(error => {
           if (!error) {return}
           // Update values
           let {values} = this.state;
           values[key] = value;
           this.setState({values});
-          // Store error
-          let {errors} = this.state;
-          errors[key] = this.getErrors(error);
-          this.setState({errors});
-          log('[Stellar.forms] Form errors: ', errors);
+          log('[StellarForm.validateField] Form error: ', error);
           this.validateForm();
         })
-        .catch((e) => {
-          console.log('[Stellar.forms] validateField: ', e);
+        .catch(e => {
+          console.log('[StellarForm.validateField]: ', e);
         })
       }
     }
@@ -112,31 +116,34 @@ export default class extends React.Component {
   // Validate entire form; only set isValid:true if all required fields are present
   validateForm () {
     let schema = Yup.object().shape(this.props.schema);
-    let {values} = this.state;
+    let {values, errors} = this.state;
 
-    schema.validate(values, {context: values}).then((value) => {
-      log('[Stellar.forms validateForm] isValid: ', value);
-      if (!value) {return}
-      this.isValid(true);
+    schema.validate(values, {context: values, abortEarly: false}).then((value) => {
+      if (!value) return;
+      log('[StellarForm.validateForm]: ', value, values, errors);
+      this.isValid(true, {});
     })
     .catch((error) => {
-      log('[Stellar.forms validateForm] isValid (error): ', error);
-      if (!error) {return}
-      this.isValid(false);
+      if (!error) return;
+      log('[!StellarForm.validateForm]: ', error, values, errors);
+      let e = this.getErrors(error);
+      // {field: {}}
+      //this.setState({errors});
+      this.isValid(false, e);
     })
     .catch((e) => {
-      console.log('[Stellar.forms] validateForm: ', e);
+      console.log('[StellarForm.validateForm] (error): ', e);
     });
   }
 
-  isValid (flag) {
+  isValid (flag, errors) {
     //let hasErrors = Object.keys(this.state.errors).length > 0;
     let {onValid, onInvalid} = this.props;
     /*if (flag && hasErrors) {
       // If value is valid but we stil have errors, don't modify state
       return;
     } else {*/
-      this.setState({isValid: flag});
+      this.setState({isValid: flag, errors});
 
       if (flag && onValid) {
         onValid();
@@ -150,15 +157,13 @@ export default class extends React.Component {
   }
 
   getErrors (error) {
-    let message = '';
-    // !!! Update this
-    let details = error.errors;
-
-    details.forEach(function (str, index) {
-      message += (str + ' ');
+    let e = {};
+    // {path, message} => {path: message, ...}
+    error.inner.forEach(obj => {
+      e[obj.path] = obj.message;
     });
 
-    return _.capitalize(message);
+    return e;
   }
 
   onSetProps (props, key) {
@@ -214,7 +219,7 @@ export default class extends React.Component {
       if (config.onBlurKey) {
         onBlurKey = config.onBlurKey;
       }
-      props[onBlurKey] = this.validateField(key); // default callback
+      props[onBlurKey] = this.validateForm; // default callback, must be fn
       if (config.onBlur) {
         props[onBlurKey] = config.onBlur.bind(this, key);
       }
@@ -225,12 +230,17 @@ export default class extends React.Component {
       if (config.onChangeKey) {
         onChangeKey = config.onChangeKey;
       }
-      props[onChangeKey] = this.validateField(key);
+      props[onChangeKey] = this.updateValue(key);
       if (config.onChange) {
         props[onChangeKey] = config.onChange.bind(this, key);
       }
-      props.value = this.state.values[key];
+      //props.value = this.state.values[key]; don't use controlled for now
     }
+
+    /*if (Stellar.forms.useRefs) {
+      let refKey = 'ref';
+      props[refKey] = (input) => this[key] = input;
+    }*/
 
     // Call external setProps handlers
     this.onSetProps(props, key);

@@ -12,7 +12,8 @@
   "scripts": {
     "lint": "eslint ./lib",
     "lintfix": "eslint ./lib --fix",
-    "transpile": "babel src/ --out-dir lib/"
+    "transpile": "babel src/ --out-dir lib/ --watch",
+    "transpileOnce": "babel src/ --out-dir lib/"
   },
   "devDependencies": {
     "babel-cli": "6.x.x",

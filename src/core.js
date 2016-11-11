@@ -28,8 +28,12 @@ Stellar.forms.config = function (key, obj) {
 
 Stellar.forms.validator = 'yup';
 
-window.log = console.log.bind(console);
-
-if (!Stellar.debug) window.log = function () {};
+Stellar.forms.AUTOFILL_VALIDATION_DELAY = 1000;
 
 export default Stellar;
+
+
+const log = console.log.bind(console);
+if (!Stellar.forms.debug) window.log = function () {};
+
+export {log};
