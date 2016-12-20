@@ -2,7 +2,7 @@ import React from 'react';
 import _ from 'lodash';
 import Yup from 'yup';
 
-import Stellar, {log} from './core';
+import Stellar, {log, warn} from './core';
 
 export default class extends React.Component {
   render () {
@@ -181,6 +181,8 @@ export default class extends React.Component {
 
     return React.Children.map(children, function (child) {
       if (! child) {return;}
+      // String expressions don't have props, just return it
+      if (!React.isValidElement(child)) {return child;}
       let props = {};
       // Allows overwriting the onBlur prop name e.g. onDismiss
       if (child.props.name) {

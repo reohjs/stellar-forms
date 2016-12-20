@@ -37,3 +37,8 @@ const log = console.log.bind(console);
 if (!Stellar.forms.debug) window.log = function () {};
 
 export {log};
+
+const warn = console.warn.bind(console);
+if (!Stellar.forms.debug) window.warn = function () {};
+
+export {warn};
