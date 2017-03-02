@@ -1,5 +1,7 @@
 import Stellar from './core';
-import './form';
-import './extend';
+import StellarForm from './form';
+//import './extend';
 
-export default Stellar;
+export default StellarForm;
+
+export {Stellar};
